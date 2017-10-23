@@ -1,6 +1,6 @@
 use rand;
 
 
-pub type Rand = rand::XorShiftRng;
+pub type Random = rand::XorShiftRng;
 
 pub type Seed = [u32; 4];

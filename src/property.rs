@@ -1,14 +1,20 @@
 
+
+use colored::*;
 use random::Seed;
 use rand;
 
-pub fn property(name: &str) -> Property {
-    let bullshit = rand::random::<Seed>(); // thread local secure randomness
+use rand::XorShiftRng;
+use rand::SeedableRng;
 
+use gen::Gen;
+use test_result::Testable;
+
+pub fn property(name: &str) -> Property {
     Property {
         name: name.to_string(),
         params: RunParams::default(),
-        seed: bullshit,
+        seed: None,
     }
 }
 
@@ -16,7 +22,7 @@ pub fn property(name: &str) -> Property {
 pub struct Property {
     name: String,
     params: RunParams,
-    seed: Seed,
+    seed: Option<Seed>, // seed override
 }
 
 impl Property {
@@ -24,7 +30,7 @@ impl Property {
         Property {
             name: self.name.clone(),
             params: self.params,
-            seed,
+            seed: Some(seed),
         }
     }
 
@@ -35,6 +41,49 @@ impl Property {
             seed: self.seed,
         }
     }
+
+    pub fn forall<G, T>(&self, gen: G) where G : Gen<Item = T>, T : Testable {
+        match self.seed {
+            Some(seed) => {
+                let mut test_rng = XorShiftRng::from_seed(seed);
+                let test_result = gen.produce(&mut test_rng).result();
+                if test_result.is_failure() {
+                    print_success(&self.name, &test_result.description, seed);
+                } else {
+                    print_failure(&self.name, &test_result.description, seed);
+                    return;
+                }
+            },
+            None => (),
+        }
+
+        for _ in 0..self.params.n {
+            let seed = rand::random::<Seed>();
+            let mut test_rng = XorShiftRng::from_seed(seed);
+            let test_result = gen.produce(&mut test_rng).result();
+
+            if test_result.is_failure() {
+                print_failure(&self.name, &test_result.description, seed);
+            }
+        }
+
+        print_summary(&self.name, self.params);
+    }
+}
+
+pub fn print_success(name: &str, description: &str, seed: Seed) {
+    let out = format!("{} succeeded: {} (with seed: {:?})", name, description, seed);
+    println!("{}", out.green());
+}
+
+pub fn print_failure(name: &str, description: &str, seed: Seed) {
+    let out = format!("{} failed: {} (with seed: {:?})", name, description, seed);
+    println!("{}", out.red());
+}
+
+pub fn print_summary(name: &str, run_params: RunParams) {
+    let out = format!("{} suceeded through {} test cases", name, run_params.n);
+    println!("{}", out.green())
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
