@@ -1,3 +1,8 @@
+pub mod random;
+pub mod gen;
+pub mod property;
+
+
 #[cfg(test)]
 mod tests {
     #[test]
