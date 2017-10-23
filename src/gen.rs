@@ -1,40 +1,53 @@
 
-use random::Seed;
-
+use random::Rand;
+use rand::Rng;
 
 pub trait Gen {
     type Item;
 
-    fn produce(&self, seed:Seed) -> Self::Item;
+    fn produce(&self, rand:&mut Rand) -> Self::Item;
 
     fn map<B, F>(self, f: F) -> Map<Self, F> where
         Self: Sized, F: Fn(Self::Item) -> B {
-        Map { gen: self, f: f }
+        Map { gen: self, f }
     }
 
     fn flat_map<B, F, OG>(self, f: F) -> FlatMap<Self, F> where
         Self: Sized,
         OG : Gen,
         F: Fn(Self::Item) -> OG {
-        FlatMap { gen: self, f: f }
+        FlatMap { gen: self, f }
     }
 }
 
-pub fn ret<A>(a:A) -> PureGen<A> {
-    PureGen {
-        a: a
+pub fn ret<A>(a:A) -> PureGen<A> where A: Clone {
+    PureGen { a }
+}
+
+pub struct FGen<A> {
+    f: Box<Fn(&mut Rand) -> A>,
+}
+
+impl<A> Gen for FGen<A> {
+    type Item = A;
+
+    fn produce(&self, rand: &mut Rand) -> A {
+
+
+        (self.f)(rand)
     }
 }
+
 
 pub struct PureGen<A> {
-    pub a: A
+    a: A
 }
 
 impl<A> Gen for PureGen<A> where A: Clone {
     type Item = A;
 
     #[allow(unused_variables)]
-    fn produce(&self, seed:Seed) -> A {
+    fn produce(&self, rand: &mut Rand) -> A {
         self.a.clone()
     }
 }
@@ -47,8 +60,8 @@ pub struct Map<G, F> {
 impl<B, G: Gen, F> Gen for Map<G, F> where F: Fn(G::Item) -> B {
     type Item = B;
 
-    fn produce(&self, seed:Seed) -> B {
-        (self.f)(self.gen.produce(seed))
+    fn produce(&self, rand: &mut Rand) -> B {
+        (self.f)(self.gen.produce(rand))
     }
 }
 
@@ -60,10 +73,9 @@ pub struct FlatMap<G, F> {
 impl<G: Gen, F, OG: Gen> Gen for FlatMap<G, F> where F: Fn(G::Item) -> OG {
     type Item = OG::Item;
 
-    fn produce(&self, seed:Seed) -> OG::Item {
-        let (sa, sb) = seed.split();
-        let a = self.gen.produce(sa);
+    fn produce(&self, rand: &mut Rand) -> OG::Item {
+        let a = self.gen.produce(rand);
         let b = (self.f)(a);
-        b.produce(sb)
+        b.produce(rand)
     }
 }
