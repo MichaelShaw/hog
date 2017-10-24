@@ -43,15 +43,16 @@ impl Property {
     }
 
     pub fn forall<G, T>(&self, gen: G) where G : Gen<Item = T>, T : Testable {
+        print_descirption(&self.name, self.params, self.seed);
         match self.seed {
             Some(seed) => {
                 let mut test_rng = XorShiftRng::from_seed(seed);
-                let test_result = gen.produce(&mut test_rng).result();
+                let test_result = gen.run(&mut test_rng).result();
                 if test_result.is_failure() {
-                    print_success(&self.name, &test_result.description, seed);
-                } else {
                     print_failure(&self.name, &test_result.description, seed);
                     return;
+                } else {
+                    print_success(&self.name, &test_result.description, seed);
                 }
             },
             None => (),
@@ -60,15 +61,26 @@ impl Property {
         for _ in 0..self.params.n {
             let seed = rand::random::<Seed>();
             let mut test_rng = XorShiftRng::from_seed(seed);
-            let test_result = gen.produce(&mut test_rng).result();
+            let test_result = gen.run(&mut test_rng).result();
 
             if test_result.is_failure() {
                 print_failure(&self.name, &test_result.description, seed);
+                return;
             }
         }
 
         print_summary(&self.name, self.params);
     }
+}
+
+pub fn print_descirption(name: &str, run_params:RunParams, seed: Option<Seed>) {
+    let out : String = if let Some(s) = seed {
+        format!("Running {} with seed {:?} and {} test cases", name, s, run_params.n)
+    } else {
+        format!("Running {} with {} test cases", name, run_params.n)
+    };
+
+    println!("{}", out.cyan());
 }
 
 pub fn print_success(name: &str, description: &str, seed: Seed) {

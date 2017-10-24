@@ -9,7 +9,7 @@ use num_traits::cast::ToPrimitive;
 pub trait Gen {
     type Item;
 
-    fn produce(&self, rand:&mut Random) -> Self::Item;
+    fn run(&self, rand:&mut Random) -> Self::Item;
 
     fn map<B, F>(self, f: F) -> Map<Self, F> where
         Self: Sized, F: Fn(Self::Item) -> B {
@@ -23,19 +23,43 @@ pub trait Gen {
         FlatMap { gen: self, f }
     }
 
-    fn uniform<N>(min: N, max: N) -> Uniform<N> where N : Integer + ToPrimitive + NumCast + Copy {
-        assert!(max >= min);
-        Uniform {
-            min,
-            max,
-        }
-    }
-
     fn in_vec_with_max_size(self, size:usize) -> VecGen<Self, Uniform<usize>> where Self: Sized {
         VecGen {
             eg: self,
             lg: Uniform { min: 0, max: size },
         }
+    }
+}
+
+pub struct Choice<G> {
+    gens: Vec<G>
+}
+
+pub fn choice<G>(gens: Vec<G>) -> Choice<G> {
+    Choice {
+        gens
+    }
+}
+
+impl<G> Gen for Choice<G> where G : Gen {
+    type Item = G::Item;
+
+    fn run(&self, rand: &mut Random) -> Self::Item {
+        let ig = &self.gens[usize_less_than(rand, self.gens.len())];
+        ig.run(rand)
+    }
+}
+
+pub fn usize_less_than(rand: &mut Random, max:usize) -> usize {
+    usize::rand(rand) % max
+}
+
+
+pub fn uniform<N>(min: N, max: N) -> Uniform<N> where N : Integer + ToPrimitive + NumCast + Copy {
+    assert!(max >= min);
+    Uniform {
+        min,
+        max,
     }
 }
 
@@ -47,7 +71,7 @@ pub struct Uniform<N> {
 impl<N> Gen for Uniform<N> where N : Integer + ToPrimitive + NumCast + Copy {
     type Item = N;
 
-    fn produce(&self, rand: &mut Random) -> Self::Item {
+    fn run(&self, rand: &mut Random) -> Self::Item {
         let length = self.max - self.min;
         if length == N::zero() {
             self.min
@@ -67,11 +91,11 @@ pub struct VecGen<ElementGen, LengthGen> {
 impl<ElementGen, LengthGen> Gen for VecGen<ElementGen, LengthGen> where LengthGen : Gen<Item = usize>, ElementGen : Gen {
     type Item = Vec<ElementGen::Item>;
 
-    fn produce(&self, rand: &mut Random) -> Self::Item {
-        let length = self.lg.produce(rand);
+    fn run(&self, rand: &mut Random) -> Self::Item {
+        let length = self.lg.run(rand);
         let mut out = vec![];
         for _ in 0..length {
-            out.push(self.eg.produce(rand));
+            out.push(self.eg.run(rand));
         }
         out
     }
@@ -88,7 +112,7 @@ pub struct FGen<A> {
 impl<A> Gen for FGen<A> {
     type Item = A;
 
-    fn produce(&self, rand: &mut Random) -> A {
+    fn run(&self, rand: &mut Random) -> A {
         (self.f)(rand)
     }
 }
@@ -102,7 +126,7 @@ impl<A> Gen for PureGen<A> where A: Clone {
     type Item = A;
 
     #[allow(unused_variables)]
-    fn produce(&self, rand: &mut Random) -> A {
+    fn run(&self, rand: &mut Random) -> A {
         self.a.clone()
     }
 }
@@ -115,8 +139,8 @@ pub struct Map<G, F> {
 impl<B, G: Gen, F> Gen for Map<G, F> where F: Fn(G::Item) -> B {
     type Item = B;
 
-    fn produce(&self, rand: &mut Random) -> B {
-        (self.f)(self.gen.produce(rand))
+    fn run(&self, rand: &mut Random) -> B {
+        (self.f)(self.gen.run(rand))
     }
 }
 
@@ -128,9 +152,9 @@ pub struct FlatMap<G, F> {
 impl<G: Gen, F, OG: Gen> Gen for FlatMap<G, F> where F: Fn(G::Item) -> OG {
     type Item = OG::Item;
 
-    fn produce(&self, rand: &mut Random) -> OG::Item {
-        let a = self.gen.produce(rand);
+    fn run(&self, rand: &mut Random) -> OG::Item {
+        let a = self.gen.run(rand);
         let b = (self.f)(a);
-        b.produce(rand)
+        b.run(rand)
     }
 }
