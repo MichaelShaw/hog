@@ -86,6 +86,11 @@ pub fn usize_less_than(rand: &mut Random, max:usize) -> usize {
     usize::rand(rand) % max
 }
 
+pub fn u64_between(rand: &mut Random, min: u64, max: u64) -> u64 {
+    let range = max - min;
+    min + (u64::rand(rand) % range)
+}
+
 
 pub fn uniform<N>(min: N, max: N) -> Uniform<N> where N : Integer + ToPrimitive + NumCast + Copy {
     assert!(max >= min);
