@@ -13,22 +13,22 @@ pub trait Gen {
 
     fn run(&self, rand:&mut Random) -> Self::Item;
 
-    fn map<B, F>(self, f: F) -> Map<Self, F> where
+    fn map<B, F>(&self, f: F) -> Map<Self, F> where
         Self: Sized, F: Fn(Self::Item) -> B {
         Map { gen: self, f }
     }
 
-    fn flat_map<B, F, OG>(self, f: F) -> FlatMap<Self, F> where
+    fn flat_map<B, F, OG>(&self, f: F) -> FlatMap<Self, F> where
         Self: Sized,
         OG : Gen,
         F: Fn(Self::Item) -> OG {
         FlatMap { gen: self, f }
     }
 
-    fn in_vec_with_max_size(self, size:usize) -> VecGen<Self, Uniform<usize>> where Self: Sized {
+    fn in_vec_with_max_size<'a>(&'a self, size: &'a Uniform<usize>) -> VecGen<'a, Self, Uniform<usize>> where Self: Sized {
         VecGen {
             eg: self,
-            lg: Uniform { min: 0, max: size },
+            lg: size,
         }
     }
 }
@@ -116,12 +116,12 @@ impl<N> Gen for Uniform<N> where N : Integer + ToPrimitive + NumCast + Copy {
 }
 
 #[derive(Clone, Debug)]
-pub struct VecGen<ElementGen, LengthGen> {
-    eg: ElementGen,
-    lg: LengthGen,
+pub struct VecGen<'a, ElementGen, LengthGen> where ElementGen: 'a, LengthGen: 'a {
+    eg: &'a ElementGen,
+    lg: &'a LengthGen,
 }
 
-impl<ElementGen, LengthGen> Gen for VecGen<ElementGen, LengthGen> where LengthGen : Gen<Item = usize>, ElementGen : Gen {
+impl<'a, ElementGen, LengthGen> Gen for VecGen<'a, ElementGen, LengthGen> where LengthGen : Gen<Item = usize>, ElementGen : Gen {
     type Item = Vec<ElementGen::Item>;
 
     fn run(&self, rand: &mut Random) -> Self::Item {
@@ -164,12 +164,12 @@ impl<A> Gen for PureGen<A> where A: Clone {
     }
 }
 
-pub struct Map<G, F> {
-    gen: G,
+pub struct Map<'a, G, F> where G : 'a {
+    gen: &'a G,
     f: F,
 }
 
-impl<B, G: Gen, F> Gen for Map<G, F> where F: Fn(G::Item) -> B {
+impl<'a, B, G: Gen, F> Gen for Map<'a, G, F> where F: Fn(G::Item) -> B {
     type Item = B;
 
     fn run(&self, rand: &mut Random) -> B {
@@ -177,12 +177,12 @@ impl<B, G: Gen, F> Gen for Map<G, F> where F: Fn(G::Item) -> B {
     }
 }
 
-pub struct FlatMap<G, F> {
-    gen: G,
+pub struct FlatMap<'a, G, F> where G : 'a {
+    gen: &'a G,
     f: F,
 }
 
-impl<G: Gen, F, OG: Gen> Gen for FlatMap<G, F> where F: Fn(G::Item) -> OG {
+impl<'a, G: Gen, F, OG: Gen> Gen for FlatMap<'a, G, F> where F: Fn(G::Item) -> OG {
     type Item = OG::Item;
 
     fn run(&self, rand: &mut Random) -> OG::Item {
