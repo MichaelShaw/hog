@@ -10,7 +10,7 @@ enum Color {
 }
 
 fn main() {
-    let chars : Characters = characters_from("abcdefghijklmnopqrstuvwxyz ", 20);
+    let chars : Characters = characters_from("abcdefghijklmnopqrstuvwxyz ", 10, 14);
     property("characters").forall(chars.map(|st| {
         println!("string -> {:?}", st);
         true

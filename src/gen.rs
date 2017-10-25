@@ -33,10 +33,12 @@ pub trait Gen {
     }
 }
 
-pub fn characters_from(chars: &str, max_size: usize) -> Characters {
+pub fn characters_from(chars: &str, min_size: usize, max_size: usize) -> Characters {
     assert!(!chars.is_empty());
+    assert!(max_size >= min_size);
     Characters {
         chars: chars.chars().collect(),
+        min_size,
         max_size,
     }
 }
@@ -44,6 +46,7 @@ pub fn characters_from(chars: &str, max_size: usize) -> Characters {
 #[derive(Clone, Debug)]
 pub struct Characters {
     chars: Vec<char>,
+    min_size: usize,
     max_size: usize,
 }
 
@@ -51,7 +54,7 @@ impl Gen for Characters where  {
     type Item = String;
 
     fn run(&self, rand: &mut Random) -> Self::Item {
-        let size = usize_less_than(rand, self.max_size);
+        let size = self.min_size + usize_less_than(rand, self.max_size - self.min_size);
 
         (0..size).map(|_| {
             self.chars[usize_less_than(rand, self.chars.len())]
