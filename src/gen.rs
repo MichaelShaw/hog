@@ -41,6 +41,7 @@ pub fn characters_from(chars: &str, max_size: usize) -> Characters {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct Characters {
     chars: Vec<char>,
     max_size: usize,
@@ -58,6 +59,7 @@ impl Gen for Characters where  {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct Choice<G> {
     gens: Vec<G>
 }
@@ -90,7 +92,8 @@ pub fn uniform<N>(min: N, max: N) -> Uniform<N> where N : Integer + ToPrimitive 
     }
 }
 
-pub struct Uniform<N> {
+#[derive(Clone, Debug)]
+pub struct Uniform<N> where N : Clone {
     min: N,
     max: N,
 }
@@ -109,10 +112,10 @@ impl<N> Gen for Uniform<N> where N : Integer + ToPrimitive + NumCast + Copy {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct VecGen<ElementGen, LengthGen> {
     eg: ElementGen,
     lg: LengthGen,
-
 }
 
 impl<ElementGen, LengthGen> Gen for VecGen<ElementGen, LengthGen> where LengthGen : Gen<Item = usize>, ElementGen : Gen {
@@ -144,8 +147,8 @@ impl<A> Gen for FGen<A> {
     }
 }
 
-
-pub struct PureGen<A> {
+#[derive(Clone, Debug)]
+pub struct PureGen<A> where A: Clone {
     a: A
 }
 
