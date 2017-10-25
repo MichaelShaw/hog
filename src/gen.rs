@@ -6,6 +6,8 @@ use num_integer::Integer;
 use num_traits::NumCast;
 use num_traits::cast::ToPrimitive;
 
+use std::collections::HashSet;
+
 pub trait Gen {
     type Item;
 
@@ -28,6 +30,31 @@ pub trait Gen {
             eg: self,
             lg: Uniform { min: 0, max: size },
         }
+    }
+}
+
+pub fn characters_from(chars: &str, max_size: usize) -> Characters {
+    assert!(!chars.is_empty());
+    Characters {
+        chars: chars.chars().collect(),
+        max_size,
+    }
+}
+
+pub struct Characters {
+    chars: Vec<char>,
+    max_size: usize,
+}
+
+impl Gen for Characters where  {
+    type Item = String;
+
+    fn run(&self, rand: &mut Random) -> Self::Item {
+        let size = usize_less_than(rand, self.max_size);
+
+        (0..size).map(|_| {
+            self.chars[usize_less_than(rand, self.chars.len())]
+        }).collect::<String>()
     }
 }
 

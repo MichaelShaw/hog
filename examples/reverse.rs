@@ -10,6 +10,18 @@ enum Color {
 }
 
 fn main() {
+    let chars : Characters = characters_from("abcdefghijklmnopqrstuvwxyz ", 20);
+    property("characters").forall(chars.map(|st| {
+        println!("string -> {:?}", st);
+        true
+    }));
+
+
+    let gi : Uniform<i64> = uniform::<i64>(-5, 5);
+    property("signed").forall(gi.map(|n|{
+        println!("n -> {:?}", n);
+        true
+    }));
 
     let gen : Uniform<u32> = uniform::<u32>(0, 10);
     property("reverse").forall(gen.map(|n| eq(n, n * 2)));
