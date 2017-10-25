@@ -18,7 +18,7 @@ pub trait Gen {
         Map { gen: self, f }
     }
 
-    fn flat_map<B, F, OG>(&self, f: F) -> FlatMap<Self, F> where
+    fn flat_map<F, OG>(&self, f: F) -> FlatMap<Self, F> where
         Self: Sized,
         OG : Gen,
         F: Fn(Self::Item) -> OG {
